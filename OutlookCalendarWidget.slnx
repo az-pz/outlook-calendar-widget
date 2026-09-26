@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OutlookCalendarWidget.Core/OutlookCalendarWidget.Core.csproj" />
+    <Project Path="src/OutlookCalendarWidget/OutlookCalendarWidget.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OutlookCalendarWidget.Core.Tests/OutlookCalendarWidget.Core.Tests.csproj" />
+  </Folder>
+</Solution>

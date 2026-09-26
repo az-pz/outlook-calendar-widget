@@ -1,0 +1,67 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Customize",
+      "weight": "Bolder",
+      "size": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "range",
+      "label": "Show events for",
+      "style": "compact",
+      "value": "${range}",
+      "isRequired": true,
+      "choices": [
+        {
+          "title": "Today",
+          "value": "today"
+        },
+        {
+          "title": "Today and tomorrow",
+          "value": "twoDays"
+        },
+        {
+          "title": "Next 7 days",
+          "value": "week"
+        }
+      ]
+    },
+    {
+      "type": "Input.Toggle",
+      "id": "showAllDay",
+      "title": "Show all-day events",
+      "value": "${showAllDay}",
+      "valueOn": "true",
+      "valueOff": "false"
+    },
+    {
+      "type": "Input.Toggle",
+      "id": "showDeclined",
+      "title": "Show declined meetings",
+      "value": "${showDeclined}",
+      "valueOn": "true",
+      "valueOff": "false",
+      "spacing": "None"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Execute",
+      "title": "Save",
+      "verb": "saveCustomization",
+      "style": "positive"
+    },
+    {
+      "type": "Action.Execute",
+      "title": "Cancel",
+      "verb": "exitCustomization",
+      "associatedInputs": "none"
+    }
+  ]
+}

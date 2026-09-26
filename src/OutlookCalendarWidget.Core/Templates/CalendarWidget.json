@@ -1,0 +1,355 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "$when": "${!isOk}",
+      "height": "stretch",
+      "verticalContentAlignment": "Center",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${statusTitle}",
+          "weight": "Bolder",
+          "size": "Medium",
+          "wrap": true,
+          "horizontalAlignment": "Center"
+        },
+        {
+          "type": "TextBlock",
+          "$when": "${message != '' && $host.widgetSize != 'small'}",
+          "text": "${message}",
+          "wrap": true,
+          "isSubtle": true,
+          "size": "Small",
+          "horizontalAlignment": "Center",
+          "spacing": "Small"
+        },
+        {
+          "type": "ActionSet",
+          "$when": "${hasActionUrl}",
+          "horizontalAlignment": "Center",
+          "spacing": "Medium",
+          "actions": [
+            {
+              "type": "Action.OpenUrl",
+              "title": "${actionTitle}",
+              "url": "${actionUrl}"
+            }
+          ]
+        },
+        {
+          "type": "ActionSet",
+          "$when": "${hasActionVerb}",
+          "horizontalAlignment": "Center",
+          "spacing": "Medium",
+          "actions": [
+            {
+              "type": "Action.Execute",
+              "title": "${actionTitle}",
+              "verb": "${actionVerb}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "$when": "${isOk && hasNext && $host.widgetSize == 'small'}",
+      "height": "stretch",
+      "verticalContentAlignment": "Center",
+      "selectAction": {
+        "type": "Action.OpenUrl",
+        "title": "Open",
+        "url": "${next.primaryUrl}"
+      },
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${next.relativeText}",
+          "size": "Small",
+          "weight": "Bolder",
+          "color": "Accent",
+          "wrap": false
+        },
+        {
+          "type": "TextBlock",
+          "text": "${next.subject}",
+          "weight": "Bolder",
+          "wrap": true,
+          "maxLines": 2,
+          "spacing": "Small"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${next.timeText} – ${next.endText}",
+          "size": "Small",
+          "isSubtle": true,
+          "wrap": false,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "$when": "${isOk && !hasNext && $host.widgetSize == 'small'}",
+      "height": "stretch",
+      "verticalContentAlignment": "Center",
+      "selectAction": {
+        "type": "Action.OpenUrl",
+        "title": "Open Outlook",
+        "url": "${outlookUrl}"
+      },
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${emptyTitle}",
+          "weight": "Bolder",
+          "wrap": true,
+          "horizontalAlignment": "Center"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${emptyText}",
+          "size": "Small",
+          "isSubtle": true,
+          "wrap": true,
+          "horizontalAlignment": "Center",
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "$when": "${isOk && $host.widgetSize != 'small'}",
+      "height": "stretch",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${heading}",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "wrap": false
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${dateLabel}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "wrap": false,
+                  "spacing": "None"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "$when": "${$host.widgetSize == 'large'}",
+              "width": "auto",
+              "verticalContentAlignment": "Bottom",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${summary}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "wrap": false,
+                  "horizontalAlignment": "Right"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Container",
+          "$when": "${!hasEvents}",
+          "spacing": "ExtraLarge",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "${emptyTitle}",
+              "weight": "Bolder",
+              "wrap": true,
+              "horizontalAlignment": "Center"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${emptyText}",
+              "size": "Small",
+              "isSubtle": true,
+              "wrap": true,
+              "horizontalAlignment": "Center",
+              "spacing": "Small"
+            }
+          ]
+        },
+        {
+          "type": "Container",
+          "$data": "${days}",
+          "spacing": "Medium",
+          "items": [
+            {
+              "type": "TextBlock",
+              "$when": "${$root.showDayHeaders}",
+              "text": "${label}",
+              "size": "Small",
+              "weight": "Bolder",
+              "isSubtle": true,
+              "wrap": false
+            },
+            {
+              "type": "Container",
+              "$data": "${events}",
+              "style": "${rowStyle}",
+              "spacing": "Small",
+              "selectAction": {
+                "type": "Action.OpenUrl",
+                "title": "Open in Outlook",
+                "url": "${openUrl}"
+              },
+              "items": [
+                {
+                  "type": "ColumnSet",
+                  "columns": [
+                    {
+                      "type": "Column",
+                      "width": "4px",
+                      "verticalContentAlignment": "Center",
+                      "items": [
+                        {
+                          "type": "Image",
+                          "url": "${statusBarUrl}",
+                          "width": "4px",
+                          "height": "32px"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Column",
+                      "width": "80px",
+                      "items": [
+                        {
+                          "type": "TextBlock",
+                          "text": "${timeText}",
+                          "size": "Small",
+                          "weight": "Bolder",
+                          "wrap": false
+                        },
+                        {
+                          "type": "TextBlock",
+                          "$when": "${hasEndText}",
+                          "text": "${endText}",
+                          "size": "Small",
+                          "isSubtle": true,
+                          "wrap": false,
+                          "spacing": "None"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Column",
+                      "width": "stretch",
+                      "items": [
+                        {
+                          "type": "TextBlock",
+                          "text": "${subject}",
+                          "size": "Small",
+                          "weight": "Bolder",
+                          "wrap": true,
+                          "maxLines": 1
+                        },
+                        {
+                          "type": "TextBlock",
+                          "$when": "${hasDetail}",
+                          "text": "${detail}",
+                          "size": "Small",
+                          "isSubtle": true,
+                          "wrap": true,
+                          "maxLines": 1,
+                          "spacing": "None"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Column",
+                      "$when": "${showJoin}",
+                      "width": "auto",
+                      "verticalContentAlignment": "Center",
+                      "items": [
+                        {
+                          "type": "ActionSet",
+                          "actions": [
+                            {
+                              "type": "Action.OpenUrl",
+                              "title": "Join",
+                              "url": "${joinUrl}",
+                              "style": "positive"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "TextBlock",
+          "$when": "${hasMore}",
+          "text": "${moreText}",
+          "size": "Small",
+          "isSubtle": true,
+          "wrap": false,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "$when": "${isOk && $host.widgetSize == 'large'}",
+      "spacing": "Medium",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "verticalContentAlignment": "Center",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "${updatedText}",
+              "size": "Small",
+              "isSubtle": true,
+              "wrap": false
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [
+            {
+              "type": "ActionSet",
+              "actions": [
+                {
+                  "type": "Action.OpenUrl",
+                  "title": "Open Outlook",
+                  "url": "${outlookUrl}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

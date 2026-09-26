@@ -1,0 +1,43 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,xml,csproj,props,targets,slnx,appxmanifest,manifest,yml,yaml}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = when_multiline:suggestion
+dotnet_sort_system_directives_first = true
+
+# The Widgets COM surface and WinRT callbacks intentionally catch everything so a single failure never
+# crashes the provider process that the Widgets Board depends on.
+dotnet_diagnostic.CA1031.severity = none
+# Culture-specific formatting is intentional: the widget renders in the user's locale.
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA1310.severity = none
+dotnet_diagnostic.CA1311.severity = none
+dotnet_diagnostic.CA1304.severity = none
+# Not a library: no need to ConfigureAwait everywhere.
+dotnet_diagnostic.CA2007.severity = none
+# URIs are passed straight through to JSON payloads.
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA2234.severity = none
+# Exceptions carry simple messages; the standard constructor set adds nothing here.
+dotnet_diagnostic.CA1032.severity = none
+# Tests use descriptive underscored names.
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA1002.severity = none
+dotnet_diagnostic.CA2227.severity = none

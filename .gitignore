@@ -1,0 +1,29 @@
+## Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+AppPackages/
+BundleArtifacts/
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+
+## IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+
+## Tests
+TestResults/
+*.trx
+
+## Node (scripts/widget-preview)
+node_modules/
+
+## Signing material (never commit)
+*.pfx
+*.cer

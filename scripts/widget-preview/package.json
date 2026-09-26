@@ -1,0 +1,14 @@
+{
+  "name": "widget-preview",
+  "private": true,
+  "type": "module",
+  "description": "Renders the widget's Adaptive Card template with sample data to produce the Widgets picker screenshots.",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "adaptivecards": "^3.0.6",
+    "adaptivecards-templating": "^2.3.1",
+    "playwright": "^1.63.0"
+  }
+}

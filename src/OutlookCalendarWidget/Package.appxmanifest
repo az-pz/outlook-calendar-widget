@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 com rescap">
+
+  <Identity
+    Name="OutlookCalendarWidget"
+    Publisher="CN=OutlookCalendarWidget Dev"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Outlook Calendar Widget</DisplayName>
+    <PublisherDisplayName>Outlook Calendar Widget</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="Outlook Calendar Widget"
+        Description="Shows your Outlook calendar on the Windows Widgets Board."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Lets widget buttons (Action.OpenUrl) launch the app in the foreground for sign-in and settings. -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="outlook-calendar-widget">
+            <uap:DisplayName>Outlook Calendar Widget</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+
+        <!-- Out-of-process COM server that implements IWidgetProvider. Same exe, started with a switch. -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="OutlookCalendarWidget.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Outlook Calendar Widget Provider">
+              <com:Class Id="E5BF83A9-075E-4D20-80B4-B4EF2B16017C" DisplayName="Outlook Calendar Widget Provider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <!-- Registers the widget with the Windows Widgets Board. -->
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Outlook Calendar" Id="OutlookCalendarWidgetProvider">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Assets\WidgetIcon.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="E5BF83A9-075E-4D20-80B4-B4EF2B16017C" />
+                </Activation>
+                <Definitions>
+                  <Definition
+                    Id="OutlookCalendar_Agenda"
+                    DisplayName="Outlook Calendar"
+                    Description="Your upcoming Outlook meetings at a glance."
+                    AllowMultiple="true"
+                    IsCustomizable="true">
+                    <Capabilities>
+                      <Capability>
+                        <Size Name="small" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="medium" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="large" />
+                      </Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="Assets\WidgetIcon.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="Assets\WidgetScreenshot.png" DisplayAltText="Outlook Calendar widget showing today's meetings" />
+                      </Screenshots>
+                      <DarkMode>
+                        <Screenshots>
+                          <Screenshot Path="Assets\WidgetScreenshotDark.png" DisplayAltText="Outlook Calendar widget showing today's meetings" />
+                        </Screenshots>
+                      </DarkMode>
+                      <LightMode>
+                        <Screenshots>
+                          <Screenshot Path="Assets\WidgetScreenshot.png" DisplayAltText="Outlook Calendar widget showing today's meetings" />
+                        </Screenshots>
+                      </LightMode>
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
