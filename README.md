@@ -1,6 +1,7 @@
 # Outlook Calendar Widget
 
 [![CI](https://github.com/az-pz/outlook-calendar-widget/actions/workflows/ci.yml/badge.svg)](https://github.com/az-pz/outlook-calendar-widget/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Your Outlook calendar on the Windows 11 Widgets board (<kbd>Win</kbd>+<kbd>W</kbd>). It reads your meetings straight from classic Outlook on your PC, with no sign-in and no cloud calls. It can also read them from Microsoft 365 or Outlook.com through Microsoft Graph.
 
@@ -199,3 +200,9 @@ docs/images/                      README screenshots
    ```
 
 This also deletes the app's settings, logs, and cached account data. To also remove the Entra app registration, delete it in the Microsoft Entra admin center.
+
+## License
+
+[MIT](LICENSE) © 2026 Ariz Zubair.
+
+This is a personal project, not an official Microsoft product. Outlook, Microsoft 365, Windows, and Teams are trademarks of the Microsoft group of companies.
