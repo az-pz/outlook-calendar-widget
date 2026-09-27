@@ -1,0 +1,246 @@
+name: Release
+
+# Pushing a tag like v1.2.3 builds, signs, smoke-tests and publishes a GitHub release. The tag must match the version
+# in Package.appxmanifest (1.2.3.0). Running the workflow by hand does everything except publishing, so you can try
+# the packages from the run's artifacts first.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Test
+        run: dotnet test --project tests/OutlookCalendarWidget.Core.Tests -c Release
+
+  package:
+    runs-on: windows-latest
+    # Holds the signing certificate secrets; only main and v* tags can use it.
+    environment: release
+    strategy:
+      matrix:
+        include:
+          - platform: x64
+            arch: x64
+          - platform: ARM64
+            arch: arm64
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Read version
+        id: version
+        run: |
+          [xml] $manifest = Get-Content src/OutlookCalendarWidget/Package.appxmanifest
+          $packageVersion = [version] $manifest.Package.Identity.Version
+          $version = $packageVersion.ToString(3)
+          if ($packageVersion.Revision -ne 0) {
+            throw "Keep the last part of the package version at 0 (found $packageVersion)."
+          }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME doesn't match version $packageVersion in Package.appxmanifest."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build package
+        run: >-
+          dotnet build src/OutlookCalendarWidget/OutlookCalendarWidget.csproj -c Release
+          -p:Platform=${{ matrix.platform }}
+          -p:RuntimeIdentifier=win-${{ matrix.arch }}
+          -p:SelfContained=true
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:GenerateAppxPackageOnBuild=true
+          -p:UapAppxPackageBuildMode=SideloadOnly
+          -p:AppxSymbolPackageEnabled=false
+          "-p:AppxPackageDir=${{ runner.temp }}/AppPackages/"
+
+      - name: Sign package
+        env:
+          CERTIFICATE_PFX_BASE64: ${{ secrets.MSIX_CERTIFICATE_PFX_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MSIX_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:CERTIFICATE_PFX_BASE64 -or -not $env:CERTIFICATE_PASSWORD) {
+            throw 'Set the MSIX_CERTIFICATE_PFX_BASE64 and MSIX_CERTIFICATE_PASSWORD secrets in the release environment.'
+          }
+          $nugetPackages = (dotnet nuget locals global-packages --list) -replace '^global-packages:\s*', ''
+          $signtool = Get-ChildItem (Join-Path $nugetPackages 'microsoft.windows.sdk.buildtools') -Recurse -Filter signtool.exe |
+            Where-Object { $_.Directory.Name -eq 'x64' } | Sort-Object FullName -Descending | Select-Object -First 1
+          $msix = @(Get-ChildItem "$env:RUNNER_TEMP/AppPackages" -Recurse -Filter 'OutlookCalendarWidget_*.msix')
+          if ($msix.Count -ne 1) { throw "Expected one app package, found $($msix.Count)." }
+
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERTIFICATE_PFX_BASE64))
+          try {
+            foreach ($attempt in 1..3) {
+              & $signtool.FullName sign /fd SHA256 /f $pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $msix[0].FullName
+              if ($LASTEXITCODE -eq 0) { break }
+              if ($attempt -eq 3) { throw "signtool sign failed (exit code $LASTEXITCODE)." }
+              Start-Sleep -Seconds 15
+            }
+            $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($pfx, $env:CERTIFICATE_PASSWORD, 'EphemeralKeySet')
+            [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/OutlookCalendarWidget.cer", $certificate.Export('Cert'))
+          }
+          finally {
+            Remove-Item $pfx -Force
+          }
+
+          # signtool only accepts the self-signed chain once the certificate is trusted.
+          certutil -addstore Root "$env:RUNNER_TEMP/OutlookCalendarWidget.cer" | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "certutil -addstore failed (exit code $LASTEXITCODE)." }
+          & $signtool.FullName verify /pa $msix[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "signtool verify failed (exit code $LASTEXITCODE)." }
+
+      - name: Assemble release files
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $arch = '${{ matrix.arch }}'
+          $appPackages = "$env:RUNNER_TEMP/AppPackages"
+          $msix = Get-ChildItem $appPackages -Recurse -Filter 'OutlookCalendarWidget_*.msix'
+          $runtime = @(Get-ChildItem $appPackages -Recurse -Filter 'Microsoft.WindowsAppRuntime.*.msix' | Where-Object { $_.Directory.Name -eq $arch })
+          if ($runtime.Count -ne 1) { throw "Expected one Windows App Runtime package for $arch, found $($runtime.Count)." }
+
+          $zipRoot = "$env:RUNNER_TEMP/zip"
+          New-Item -ItemType Directory "$zipRoot/Dependencies", dist -Force | Out-Null
+          Copy-Item $msix.FullName, "$env:RUNNER_TEMP/OutlookCalendarWidget.cer", scripts/install.ps1 $zipRoot
+          Copy-Item $runtime[0].FullName "$zipRoot/Dependencies"
+          Compress-Archive -Path "$zipRoot/*" -DestinationPath "dist/OutlookCalendarWidget_${version}_$arch.zip"
+          Copy-Item $msix.FullName, "$env:RUNNER_TEMP/OutlookCalendarWidget.cer" dist
+          Get-ChildItem dist | Format-Table Name, Length -AutoSize
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+
+  smoke-test:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: package-${{ matrix.arch }}
+          path: dist
+
+      - name: Install from the release zip
+        shell: powershell
+        run: |
+          $zip = Get-ChildItem dist -Filter 'OutlookCalendarWidget_*.zip'
+          Expand-Archive $zip.FullName -DestinationPath install
+          # The second run exercises the already-installed path.
+          foreach ($run in 1..2) {
+            powershell -ExecutionPolicy Bypass -File .\install\install.ps1
+            if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed (exit code $LASTEXITCODE)." }
+          }
+
+      - name: Start the widget provider
+        shell: powershell
+        run: |
+          $package = Get-AppxPackage OutlookCalendarWidget
+          if (-not $package) { throw 'The app is not installed.' }
+          $package | Format-List Name, Version, Architecture, SignatureKind, Status, PackageFamilyName
+          $log = Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalState\logs\diagnostics.log"
+
+          # Runners have no Widgets board, so start the provider through COM like the board would and wait for it to
+          # register. That proves the self-contained app and the Windows App Runtime load on a clean machine.
+          $job = Start-Job { [Activator]::CreateInstance([Type]::GetTypeFromCLSID('E5BF83A9-075E-4D20-80B4-B4EF2B16017C')) | Out-Null }
+          $deadline = (Get-Date).AddSeconds(120)
+          $started = $false
+          while (-not $started -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+            $started = (Test-Path $log) -and (Select-String -Path $log -Pattern 'Widget provider class object registered' -Quiet)
+          }
+          $null = $job | Wait-Job -Timeout 10
+          $job | Receive-Job -ErrorAction SilentlyContinue -ErrorVariable jobErrors | Out-Null
+          $jobErrors | ForEach-Object { Write-Host "CreateInstance: $_" }
+          if (Test-Path $log) { Get-Content $log }
+          Get-Process OutlookCalendarWidget -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.Id -Force }
+          if (-not $started) { throw 'The widget provider did not start.' }
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: [test, package, smoke-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write checksums
+        working-directory: dist
+        run: |
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Install
+
+          1. Download **`OutlookCalendarWidget_{version}_x64.zip`**, or **`OutlookCalendarWidget_{version}_arm64.zip`** on an Arm PC (for example, Snapdragon).
+          2. Extract it, open PowerShell in the extracted folder, and run:
+
+             ```powershell
+             powershell -ExecutionPolicy Bypass -File .\install.ps1
+             ```
+
+             The first time, Windows asks for administrator approval to trust the package's self-signed certificate. The script also installs the Windows App Runtime if it's missing.
+          3. Press <kbd>Win</kbd>+<kbd>W</kbd>, select **+** (Add widgets), and pin **Outlook Calendar**.
+
+          To update, run `install.ps1` from the new zip, or open the new `.msix`. Your settings are kept.
+
+          Requires Windows 11 22H2 or later. The default calendar source is classic Outlook for Windows; see the [README](https://github.com/{repo}#readme) for the other sources and troubleshooting.
+
+          ## Verify the download
+
+          `SHA256SUMS.txt` lists the SHA-256 hash of every file. Each file also has a signed build provenance attestation:
+
+          ```powershell
+          gh attestation verify OutlookCalendarWidget_{version}_x64.zip --repo {repo}
+          ```
+
+          EOF
+          sed -i -e "s/{version}/$VERSION/g" -e "s|{repo}|$GH_REPO|g" notes.md
+          gh release create "$TAG" dist/* --verify-tag --title "Outlook Calendar Widget $VERSION" --notes-file notes.md --generate-notes
