@@ -1,7 +1,13 @@
 <Project>
   <ItemGroup>
     <!-- App -->
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <!-- Windows App SDK 2.5.1, minus the AI, ML and Search components that the Microsoft.WindowsAppSDK metapackage
+         also brings in (ML alone adds ~40 MB of ONNX Runtime and DirectML to every package). -->
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Widgets" Version="2.0.5" />
     <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.90.1" />
     <PackageVersion Include="Microsoft.Identity.Client.Broker" Version="4.90.1" />
