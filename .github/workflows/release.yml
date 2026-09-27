@@ -140,8 +140,12 @@ jobs:
         include:
           - arch: x64
             runner: windows-latest
+            # Windows Server has no Widgets platform, so creating the provider fails there (WidgetManager is not
+            # registered). Registering the class object still proves the app and the Windows App Runtime load.
+            expect: Widget provider class object registered
           - arch: arm64
             runner: windows-11-arm
+            expect: Widget provider started
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/download-artifact@v8
@@ -162,20 +166,22 @@ jobs:
 
       - name: Start the widget provider
         shell: powershell
+        env:
+          EXPECTED_LOG: ${{ matrix.expect }}
         run: |
           $package = Get-AppxPackage OutlookCalendarWidget
           if (-not $package) { throw 'The app is not installed.' }
           $package | Format-List Name, Version, Architecture, SignatureKind, Status, PackageFamilyName
           $log = Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalState\logs\diagnostics.log"
 
-          # Runners have no Widgets board, so start the provider through COM like the board would and wait for it to
-          # register. That proves the self-contained app and the Windows App Runtime load on a clean machine.
+          # Runners have no Widgets board, so start the provider through COM like the board would, and wait for it to
+          # log that it started. That proves the self-contained app and the Windows App Runtime load on a clean machine.
           $job = Start-Job { [Activator]::CreateInstance([Type]::GetTypeFromCLSID('E5BF83A9-075E-4D20-80B4-B4EF2B16017C')) | Out-Null }
           $deadline = (Get-Date).AddSeconds(120)
           $started = $false
           while (-not $started -and (Get-Date) -lt $deadline) {
             Start-Sleep -Seconds 2
-            $started = (Test-Path $log) -and (Select-String -Path $log -Pattern 'Widget provider class object registered' -Quiet)
+            $started = (Test-Path $log) -and (Select-String -Path $log -Pattern $env:EXPECTED_LOG -SimpleMatch -Quiet)
           }
           $null = $job | Wait-Job -Timeout 10
           $job | Receive-Job -ErrorAction SilentlyContinue -ErrorVariable jobErrors | Out-Null
